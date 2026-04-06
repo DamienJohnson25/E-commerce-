@@ -21,6 +21,7 @@
       <div class="navbar-links">
         <router-link to="/" class="nav-link">Home</router-link>
         <router-link to="/products" class="nav-link">Shop</router-link>
+        <router-link to="/account" class="nav-link">Account</router-link>
       </div>
 
       <!-- Search Bar -->
@@ -28,6 +29,8 @@
         <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
         </svg>
+       
+
         <input
           type="text"
           class="search-input"
@@ -37,6 +40,8 @@
           @keyup.enter="goToProducts"
         />
       </div>
+
+
 
       <!-- Cart Icon -->
       <router-link to="/cart" class="cart-link">
