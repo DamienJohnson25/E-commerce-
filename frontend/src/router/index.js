@@ -17,6 +17,11 @@ import ProductDetail from '../views/ProductDetail.vue'
 import CartView from '../views/CartView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
 import OrderConfirmation from '../views/OrderConfirmation.vue'
+import Register from '../views/RegisterView.vue'
+import Login from '../views/LoginView.vue'
+import { useShopStore } from '../store/index.js'
+
+
 
 const routes = [
   {
@@ -54,8 +59,30 @@ const routes = [
     name: 'order-confirmation',
     component: OrderConfirmation,
     meta: { title: 'ShopVue — Order Confirmed' }
-  }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: Register,
+    meta: { title: 'ShopVue — Register' }
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: Login,
+    meta: { title: 'ShopVue — Login' }
+  },
+
+  {
+  path: '/account',
+  name: 'account',
+  component: () => import('../views/AccountView.vue'),
+  meta: { title: 'ShopVue — My Account' }
+  },
+
 ]
+
+
 
 const router = createRouter({
   history: createWebHistory(),
@@ -67,6 +94,21 @@ const router = createRouter({
 })
 
 // Update page title on navigation
+router.beforeEach((to, from, next) => {
+  const publicPages = ['/', '/register', '/login']
+  const store = useShopStore()
+
+  if (publicPages.includes(to.path)) {
+    return next()
+  }
+
+  if (!store.isLoggedIn) {
+    return next('/login')
+  }
+
+  next()
+})
+
 router.afterEach((to) => {
   document.title = to.meta.title || 'ShopVue'
 })
