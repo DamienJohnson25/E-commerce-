@@ -12,6 +12,8 @@ entering any data — you decide column names and types first.
 import sqlite3
 import os
 from datetime import datetime
+import bcrypt
+
 
 DATABASE = os.path.join(os.path.dirname(__file__), 'shop.db')
 
@@ -274,3 +276,20 @@ def get_order(order_id):
     result = dict(order)
     result['items'] = [dict(i) for i in items]
     return result
+
+
+def create_user(name, email, password):
+    """Create a new user with hashed password."""
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    conn = get_db()
+    try:
+        conn.execute(
+            'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
+            (name, email, password_hash)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False  # Email already exists
+    finally:
+        conn.close()
