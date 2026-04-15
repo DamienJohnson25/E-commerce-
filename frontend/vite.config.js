@@ -14,5 +14,10 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+
+  // ✅ ADD THIS (Vitest config)
+  test: {
+    environment: 'jsdom'
   }
 })

@@ -1,16 +1,6 @@
-/**
- * router/index.js — Navigation Configuration
- * =============================================
- * The router is like ROAD SIGNS in our app. Each route maps
- * a URL to a "view" (a full-page component).
- *
- * When a user clicks a link to /cart, the router swaps in
- * the CartView component — no full page reload needed!
- */
-
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Import all our "pages" (views)
+// Import views
 import HomeView from '../views/HomeView.vue'
 import ProductsView from '../views/ProductsView.vue'
 import ProductDetail from '../views/ProductDetail.vue'
@@ -21,94 +11,59 @@ import Register from '../views/RegisterView.vue'
 import Login from '../views/LoginView.vue'
 import { useShopStore } from '../store/index.js'
 
-
-
 const routes = [
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView,
-    meta: { title: 'ShopVue — Home' }
-  },
-  {
-    path: '/products',
-    name: 'products',
-    component: ProductsView,
-    meta: { title: 'ShopVue — Products' }
-  },
+  { path: '/', name: 'home', component: HomeView, meta: { title: 'ShopVue — Home' } },
+  { path: '/products', name: 'products', component: ProductsView, meta: { title: 'ShopVue — Products' } },
+
   {
     path: '/product/:id',
-    name: 'product-detail',
+    name: 'ProductDetail',
     component: ProductDetail,
-    meta: { title: 'ShopVue — Product' }
-  },
-  {
-    path: '/cart',
-    name: 'cart',
-    component: CartView,
-    meta: { title: 'ShopVue — Cart' }
-  },
-  {
-    path: '/checkout',
-    name: 'checkout',
-    component: CheckoutView,
-    meta: { title: 'ShopVue — Checkout' }
-  },
-  {
-    path: '/order/:id',
-    name: 'order-confirmation',
-    component: OrderConfirmation,
-    meta: { title: 'ShopVue — Order Confirmed' }
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: Register,
-    meta: { title: 'ShopVue — Register' }
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: Login,
-    meta: { title: 'ShopVue — Login' }
+    meta: { title: 'ShopVue — Product' },
+    props: true
   },
 
+  { path: '/cart', name: 'cart', component: CartView, meta: { title: 'ShopVue — Cart' } },
+  { path: '/checkout', name: 'checkout', component: CheckoutView, meta: { title: 'ShopVue — Checkout' } },
+  { path: '/order/:id', name: 'order-confirmation', component: OrderConfirmation, meta: { title: 'ShopVue — Order Confirmed' } },
+  { path: '/register', name: 'register', component: Register, meta: { title: 'ShopVue — Register' } },
+  { path: '/login', name: 'login', component: Login, meta: { title: 'ShopVue — Login' } },
   {
-  path: '/account',
-  name: 'account',
-  component: () => import('../views/AccountView.vue'),
-  meta: { title: 'ShopVue — My Account' }
-  },
-
+    path: '/account',
+    name: 'account',
+    component: () => import('../views/AccountView.vue'),
+    meta: { title: 'ShopVue — My Account' }
+  }
 ]
-
-
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  // Scroll to top on every page change
   scrollBehavior() {
     return { top: 0 }
   }
 })
 
-// Update page title on navigation
+// ✅ FIXED AUTH GUARD
 router.beforeEach((to, from, next) => {
-  const publicPages = ['/', '/register', '/login']
   const store = useShopStore()
 
-  if (publicPages.includes(to.path)) {
+  // allow public pages
+  const publicPaths = ['/', '/register', '/login']
+
+  // allow product browsing WITHOUT login
+  if (to.path.startsWith('/products') || to.path.startsWith('/product')) {
     return next()
   }
 
-  if (!store.isLoggedIn) {
-    return next('/login')
-  }
+  if (publicPaths.includes(to.path)) return next()
+
+  if (!store.isLoggedIn) return next('/login')
 
   next()
 })
 
+// Update page title
 router.afterEach((to) => {
   document.title = to.meta.title || 'ShopVue'
 })

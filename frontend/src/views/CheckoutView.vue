@@ -1,16 +1,9 @@
-<!--
-  CheckoutView.vue — Checkout Form
-  ====================================
-  Collects shipping info and places the order.
-  Analogy: Filling out the "pay here" slip at the register.
--->
-
 <template>
   <div class="container checkout-page">
     <h1 class="page-title">Checkout</h1>
 
-    <!-- Redirect if cart is empty -->
-    <div v-if="store.cart.items.length === 0 && !submitting" class="empty-state">
+    <!-- ✅ FIXED (support both cart types) -->
+    <div v-if="(!store.cart || (store.cart.items ? store.cart.items.length === 0 : store.cart.length === 0)) && !submitting" class="empty-state">
       <span class="empty-icon">📦</span>
       <h3>Nothing to check out</h3>
       <p>Add some items to your cart first.</p>
@@ -89,7 +82,7 @@
           @click="handlePlaceOrder"
           :disabled="submitting"
         >
-          {{ submitting ? 'Placing Order...' : 'Place Order' }}
+          {{ submitting ? 'Redirecting to Payment...' : 'Place Order' }}
         </button>
       </div>
 
@@ -98,7 +91,7 @@
         <h3 class="review-title">Order Review</h3>
 
         <div class="review-items">
-          <div v-for="item in store.cart.items" :key="item.id" class="review-item">
+          <div v-for="item in (store.cart?.items || store.cart || [])" :key="item.id" class="review-item">
             <img :src="item.image_url" :alt="item.name" class="review-thumb" />
             <div class="review-item-info">
               <p class="review-item-name">{{ item.name }}</p>
@@ -132,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useShopStore } from '../store/index.js'
 
@@ -158,7 +151,6 @@ const errors = reactive({
 
 function validate() {
   let valid = true
-  // Reset errors
   Object.keys(errors).forEach(k => errors[k] = '')
 
   if (!form.customer_name.trim()) {
@@ -187,15 +179,49 @@ function validate() {
   return valid
 }
 
+onMounted(() => {
+  if (!store.cart) {
+    store.initCart()
+  }
+})
+
 async function handlePlaceOrder() {
   if (!validate()) return
 
+  const cartItems = store.cart?.items || store.cart || []
+
+  if (!cartItems.length) {
+    alert("Your cart is empty!")
+    return
+  }
+
   submitting.value = true
   try {
-    const order = await store.placeOrder({ ...form })
-    router.push(`/order/${order.id}`)
+    const line_items = cartItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price
+    }))
+
+    const res = await fetch('http://localhost:5000/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cart: line_items
+      })
+    })
+
+    const data = await res.json()
+
+    if (res.ok && data.url) {
+      window.location.href = data.url
+    } else {
+      alert(data.error || 'Failed to create Stripe session')
+    }
   } catch (err) {
-    // Error is handled by the store's showToast
+    console.error(err)
+    alert('Error contacting payment server')
   } finally {
     submitting.value = false
   }

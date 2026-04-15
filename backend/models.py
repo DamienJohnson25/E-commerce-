@@ -18,6 +18,7 @@ import bcrypt
 DATABASE = os.path.join(os.path.dirname(__file__), 'shop.db')
 
 
+
 def get_db():
     """Get a connection to the database.
     Think of this as 'opening the filing cabinet.'"""
@@ -120,15 +121,38 @@ def get_product_by_id(product_id):
     conn.close()
     return dict(row) if row else None
 
-
-def search_products(query):
-    """Search products by name or description."""
+def search_products(query='', category=None, min_price=None, max_price=None):
     conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM products WHERE name LIKE ? OR description LIKE ?",
-        (f'%{query}%', f'%{query}%')
-    ).fetchall()
+
+    sql = "SELECT * FROM products WHERE 1=1"
+    params = []
+
+    # 🔍 Search text
+    if query:
+        sql += " AND (LOWER(name) LIKE ? OR LOWER(description) LIKE ?)"
+        q = f"%{query.lower()}%"
+        params.extend([q, q])
+
+    # 📦 Category filter
+    if category and category != 'all':
+        sql += " AND category = ?"
+        params.append(category)
+
+    # 💰 Price filters
+    if min_price:
+        sql += " AND price >= ?"
+        params.append(min_price)
+
+    if max_price:
+        sql += " AND price <= ?"
+        params.append(max_price)
+
+    # ⭐ Optional: sorting (later)
+    sql += " ORDER BY featured DESC, id"
+
+    rows = conn.execute(sql, params).fetchall()
     conn.close()
+
     return [dict(r) for r in rows]
 
 

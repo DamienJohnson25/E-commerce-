@@ -15,6 +15,9 @@
         <p class="hero-subtitle">
           Discover thoughtfully selected products — from electronics to
           home essentials — built to last and designed to delight.
+         
+      
+     
         </p>
         <router-link to="/products" class="btn btn-primary btn-lg">
           Browse the Shop
@@ -35,10 +38,11 @@
       </div>
       <div v-if="store.loading" class="loading-text">Loading products...</div>
       <div v-else class="product-grid">
-        <ProductCard
-          v-for="product in store.featuredProducts.slice(0, 4)"
-          :key="product.id"
-          :product="product"
+       <ProductCard
+        v-for="product in (store.featuredProducts || []).slice(0, 4)"
+        :key="product.id"
+        :product="product"
+
         />
       </div>
     </section>

@@ -1,18 +1,9 @@
-<!--
-  CartView.vue — Shopping Cart Page
-  ====================================
-  Shows all items in the user's cart with quantity controls,
-  subtotals, and a checkout button.
-
-  Analogy: Looking at your tray before you go to the cashier.
--->
-
 <template>
   <div class="container cart-page">
     <h1 class="page-title">Your Cart</h1>
 
     <!-- Empty Cart -->
-    <div v-if="store.cart.items.length === 0" class="empty-state">
+    <div v-if="cartItems.length === 0" class="empty-state">
       <span class="empty-icon">🛒</span>
       <h3>Your cart is empty</h3>
       <p>Looks like you haven't added anything yet.</p>
@@ -22,18 +13,23 @@
     <!-- Cart Items -->
     <div v-else class="cart-layout">
       <div class="cart-items">
-        <div v-for="item in store.cart.items" :key="item.id" class="cart-item card">
+        <div v-for="item in cartItems" :key="item.id" class="cart-item card">
+          
           <!-- Item Image -->
-          <router-link :to="`/product/${item.product_id}`" class="cart-item-image-wrap">
-            <img :src="item.image_url" :alt="item.name" class="cart-item-image" />
+          <router-link :to="`/product/${item.id}`" class="cart-item-image-wrap">
+            <img :src="item.image || item.image_url" :alt="item.name || item.title" class="cart-item-image" />
           </router-link>
 
           <!-- Item Details -->
           <div class="cart-item-info">
-            <router-link :to="`/product/${item.product_id}`" class="cart-item-name">
-              {{ item.name }}
+            <router-link :to="`/product/${item.id}`" class="cart-item-name">
+              {{ item.name || item.title }}
             </router-link>
-            <p class="cart-item-price">${{ item.price.toFixed(2) }}</p>
+
+            <!-- GBP -->
+            <p class="cart-item-price">
+              {{ formatPrice(item.price) }}
+            </p>
 
             <!-- Quantity Controls -->
             <div class="cart-item-actions">
@@ -42,49 +38,49 @@
                 <span class="qty-value">{{ item.quantity }}</span>
                 <button class="qty-btn" @click="updateQty(item, 1)">+</button>
               </div>
+
               <button class="btn btn-ghost remove-btn" @click="store.removeFromCart(item.id)">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
                 Remove
               </button>
             </div>
           </div>
 
-          <!-- Line Total -->
+          <!-- Total -->
           <div class="cart-item-total">
-            ${{ (item.price * item.quantity).toFixed(2) }}
+            {{ formatPrice(item.price * item.quantity) }}
           </div>
         </div>
       </div>
 
-      <!-- Order Summary Sidebar -->
+      <!-- Order Summary -->
       <div class="cart-summary card">
         <h3 class="summary-title">Order Summary</h3>
 
         <div class="summary-lines">
           <div class="summary-line">
             <span>Subtotal ({{ store.cartItemCount }} items)</span>
-            <span>${{ store.cartTotal.toFixed(2) }}</span>
+            <span>{{ formatPrice(store.cartTotal) }}</span>
           </div>
+
           <div class="summary-line">
             <span>Shipping</span>
             <span class="free-shipping">Free</span>
           </div>
+
           <div class="summary-line">
             <span>Tax (estimated)</span>
-            <span>${{ (store.cartTotal * 0.08).toFixed(2) }}</span>
+            <span>{{ formatPrice(store.cartTotal * 0.08) }}</span>
           </div>
         </div>
 
         <div class="summary-total">
           <span>Total</span>
-          <span>${{ (store.cartTotal * 1.08).toFixed(2) }}</span>
+          <span>{{ formatPrice(store.cartTotal * 1.08) }}</span>
         </div>
 
-        <router-link to="/checkout" class="btn btn-primary btn-lg summary-checkout">
+        <button class="btn btn-primary btn-lg summary-checkout" @click="handleCheckout">
           Proceed to Checkout
-        </router-link>
+        </button>
 
         <router-link to="/products" class="continue-link">
           ← Continue Shopping
@@ -96,8 +92,30 @@
 
 <script setup>
 import { useShopStore } from '../store/index.js'
+import { useRouter } from 'vue-router'
+import { onMounted, computed } from 'vue'
 
+const router = useRouter()
 const store = useShopStore()
+
+onMounted(() => {
+  store.initCart()
+})
+
+/* ✅ FIX: unified cart handling */
+const cartItems = computed(() => {
+  if (!store.cart) return []
+  return Array.isArray(store.cart)
+    ? store.cart
+    : (store.cart.items || [])
+})
+
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP'
+  }).format(price || 0)
+}
 
 function updateQty(item, delta) {
   const newQty = item.quantity + delta
@@ -107,9 +125,19 @@ function updateQty(item, delta) {
     store.updateCartItem(item.id, newQty)
   }
 }
+
+function handleCheckout() {
+  if (cartItems.value.length === 0) {
+    alert("Your cart is empty!")
+    return
+  }
+
+  router.push('/checkout')
+}
 </script>
 
 <style scoped>
+/* 🚨 ALL CSS LEFT COMPLETELY UNCHANGED */
 .cart-page {
   padding-top: var(--space-lg);
 }

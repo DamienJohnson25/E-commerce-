@@ -1,104 +1,89 @@
-<!--
-  ProductCard.vue — Reusable Product Display Card
-  ==================================================
-  This is a LEGO piece — one card for one product.
-  Used on the home page and the products page.
-  
-  Props:
-    - product: The product object to display
--->
-
 <template>
-  <article class="product-card card" @click="goToProduct">
-    <!-- Product Image -->
+  <router-link
+    :to="{ name: 'ProductDetail', params: { id: product.id } }"
+    class="product-card"
+  >
     <div class="card-image-wrap">
-      <img
-        :src="product.image_url"
-        :alt="product.name"
-        class="card-image"
-        loading="lazy"
-      />
+      <img :src="product.image" :alt="product.title" class="card-image" />
       <span v-if="product.featured" class="featured-tag">Featured</span>
     </div>
 
-    <!-- Product Info -->
     <div class="card-body">
-      <span class="card-category">{{ product.category }}</span>
-      <h3 class="card-title">{{ product.name }}</h3>
-      <p class="card-desc">{{ truncate(product.description, 80) }}</p>
+      <div class="card-category">{{ product.category }}</div>
+      <div class="card-title">{{ product.title }}</div>
+      <div class="card-desc">{{ product.description }}</div>
 
       <div class="card-footer">
-        <span class="card-price">${{ product.price.toFixed(2) }}</span>
+        <!-- ✅ UPDATED PRICE FORMAT -->
+        <div class="card-price">{{ formatPrice(product.price) }}</div>
+
         <div class="card-rating">
-          <span class="star">★</span>
-          <span>{{ product.rating }}</span>
+          <span v-for="n in Math.floor(product.rating)" :key="n" class="star">★</span>
         </div>
       </div>
 
-      <button
-        class="btn btn-primary btn-sm card-btn"
-        @click.stop="addToCart"
-        :disabled="product.stock === 0"
-      >
-        {{ product.stock === 0 ? 'Out of Stock' : 'Add to Cart' }}
-      </button>
+      <button class="card-btn" @click.stop="addToCart(product)">Add to Cart</button>
     </div>
-  </article>
+  </router-link>
 </template>
 
-<script setup>
-import { useRouter } from 'vue-router'
+<script>
 import { useShopStore } from '../store/index.js'
 
-const props = defineProps({
-  product: { type: Object, required: true }
-})
+export default {
+  name: 'ProductCard',
+  props: {
+    product: { type: Object, required: true }
+  },
+  setup() {
+    const shopStore = useShopStore()
 
-const router = useRouter()
-const store = useShopStore()
+    function addToCart(product) {
+      shopStore.addToCart(product.id, 1)
+    }
 
-function goToProduct() {
-  router.push(`/product/${props.product.id}`)
-}
+    // ✅ NEW: Currency formatter (GBP)
+    function formatPrice(price) {
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'GBP'
+      }).format(price || 0)
+    }
 
-function addToCart() {
-  store.addToCart(props.product.id)
-}
-
-function truncate(text, max) {
-  return text.length > max ? text.substring(0, max) + '…' : text
+    return { addToCart, formatPrice }
+  }
 }
 </script>
+
+
 
 <style scoped>
 .product-card {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-decoration: none; /* ensures router-link text is normal */
+  color: inherit;
 }
 
 .product-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .card-image-wrap {
   position: relative;
-  aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--color-border-light);
+  overflow: visible;
 }
 
 .card-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s var(--ease);
-}
-
-.product-card:hover .card-image {
-  transform: scale(1.05);
+  height: auto;
+  display: block;
 }
 
 .featured-tag {
@@ -106,72 +91,69 @@ function truncate(text, max) {
   top: 12px;
   left: 12px;
   padding: 4px 10px;
-  background: var(--color-accent);
+  background: #ff4c3b;
   color: white;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
 }
 
 .card-body {
-  padding: var(--space-md) var(--space-lg) var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
-  flex: 1;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .card-category {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-accent);
+  color: #ff4c3b;
 }
 
 .card-title {
-  font-family: var(--font-heading);
-  font-size: 1.1rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
 }
 
 .card-desc {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
+  font-size: 0.95rem;
+  color: #555;
 }
 
 .card-footer {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-top: var(--space-sm);
+  align-items: center;
+  margin-top: 10px;
 }
 
 .card-price {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: #333;
 }
 
 .card-rating {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: #f5a623;
+  font-size: 0.9rem;
 }
 
 .star {
-  color: var(--color-warning);
+  margin-right: 2px;
 }
 
 .card-btn {
-  margin-top: var(--space-sm);
-  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: #ff4c3b;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
 }
 </style>
