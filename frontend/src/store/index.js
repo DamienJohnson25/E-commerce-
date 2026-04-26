@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const API = 'http://localhost:5000/api'
+const API = '/api'
 
 function getSessionId() {
   let id = localStorage.getItem('shopvue_session')
