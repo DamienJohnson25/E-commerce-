@@ -270,6 +270,14 @@ def order_detail(order_id):
         return jsonify({"error": "Order not found"}), 404
     return jsonify(order)
  
+@app.route('/api/debug-env', methods=['GET'])
+def debug_env():
+    import os
+    return jsonify({
+        "SMTP_USER": os.environ.get('SMTP_USER', 'NOT SET'),
+        "SMTP_KEY": "SET" if os.environ.get('SMTP_KEY') else "NOT SET",
+        "SENDER_EMAIL": os.environ.get('SENDER_EMAIL', 'NOT SET'),
+    })
  
 # ─── Error Handlers ────────────────────────────────────────────────
 @app.errorhandler(404)
@@ -281,7 +289,7 @@ def not_found(e):
 def server_error(e):
     return jsonify({"error": "Internal server error"}), 500
  
- 
+
 # ─── Start the Server ─────────────────────────────────────────────
 if __name__ == '__main__':
     print("ShopVue API starting on http://localhost:5000")
