@@ -10,6 +10,7 @@ from models import (
     get_categories, add_to_cart, get_cart, update_cart_item,
     remove_from_cart, create_order, get_order
 )
+
 from email_service import send_order_confirmation, send_welcome_email
  
 # ─── App Setup ─────────────────────────────────────────────────────
