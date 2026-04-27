@@ -274,7 +274,7 @@ def order_detail(order_id):
 def debug_env():
     import os
     return jsonify({
-        "SMTP_USER": os.environ.get('SMTP_USER', 'NOT SET'),
+        "SMTP_USER": os.environ.get('BREVO_SMTP_USER', 'NOT SET'),
         "SMTP_KEY": "SET" if os.environ.get('SMTP_KEY') else "NOT SET",
         "SENDER_EMAIL": os.environ.get('SENDER_EMAIL', 'NOT SET'),
     })
