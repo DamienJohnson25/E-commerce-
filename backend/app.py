@@ -93,7 +93,7 @@ def register_user():
 
         conn.commit()
 
- send_welcome_email(user['name'], user['email'])
+        send_welcome_email(user['name'], user['email'])
         return jsonify({
             "name": name,
             "email": email,
@@ -254,9 +254,8 @@ def place_order():
         return jsonify({"error": "Cart is empty — nothing to order"}), 400
 
     order = get_order(order_id)
+    send_order_confirmation(order)
     return jsonify(order), 201
-
- send_order_confirmation(order)
 
 @app.route('/api/orders/<int:order_id>', methods=['GET'])
 def order_detail(order_id):
