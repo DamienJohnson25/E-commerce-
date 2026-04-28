@@ -40,8 +40,8 @@ const store = useShopStore()
 onMounted(async () => {
   await Promise.all([
     store.fetchProducts(),
-    //store.fetchCategories(),
-    //store.fetchCart()
+    store.fetchCategories(),
+    store.fetchCart()
   ])
 })
 </script>

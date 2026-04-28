@@ -72,6 +72,123 @@ export const useShopStore = defineStore('shop', {
       }
     },
 
+    async fetchCategories() {
+      try {
+        const res = await fetch(`${API}/categories`)
+        if (!res.ok) throw new Error('Failed to fetch categories')
+        this.categories = await res.json()
+      } catch (err) {
+        console.error('fetchCategories error:', err)
+      }
+    },
+
+    async fetchCart() {
+      try {
+        const res = await fetch(`${API}/cart/${this.sessionId}`)
+        if (!res.ok) throw new Error('Failed to fetch cart')
+        this.cart = await res.json()
+      } catch (err) {
+        console.error('fetchCart error:', err)
+      }
+    },
+
+    async addToCart(productId, quantity = 1) {
+      try {
+        const res = await fetch(`${API}/cart`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            product_id: productId,
+            quantity
+          })
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to add item to cart')
+
+        await this.fetchCart()
+        this.showToast('Added to cart')
+      } catch (err) {
+        console.error('addToCart error:', err)
+        this.showToast(err.message || 'Could not add to cart')
+      }
+    },
+
+    async updateCartItem(itemId, quantity) {
+      try {
+        const res = await fetch(`${API}/cart/${itemId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity })
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to update cart item')
+
+        await this.fetchCart()
+      } catch (err) {
+        console.error('updateCartItem error:', err)
+        this.showToast(err.message || 'Could not update cart')
+      }
+    },
+
+    async removeFromCart(itemId) {
+      try {
+        const res = await fetch(`${API}/cart/${itemId}`, {
+          method: 'DELETE'
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to remove item')
+
+        await this.fetchCart()
+      } catch (err) {
+        console.error('removeFromCart error:', err)
+        this.showToast(err.message || 'Could not remove item')
+      }
+    },
+
+    async placeOrder(orderData) {
+      try {
+        const res = await fetch(`${API}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            ...orderData
+          })
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to place order')
+
+        this.cart = { items: [], total: 0, item_count: 0 }
+        this.showToast('Order placed successfully')
+        return data
+      } catch (err) {
+        console.error('placeOrder error:', err)
+        this.showToast(err.message || 'Could not place order')
+        throw err
+      }
+    },
+
+    async searchProducts(query) {
+      this.searchQuery = query
+      if (!query || !query.trim()) {
+        await this.fetchProducts()
+        return
+      }
+
+      try {
+        const res = await fetch(`${API}/products/search?q=${encodeURIComponent(query.trim())}`)
+        if (!res.ok) throw new Error('Failed to search products')
+        this.products = await res.json()
+      } catch (err) {
+        console.error('searchProducts error:', err)
+      }
+    },
+
     async login(credentials) {
       try {
         const res = await fetch(`${API}/login`, {
