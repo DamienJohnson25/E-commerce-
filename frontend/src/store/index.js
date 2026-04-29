@@ -173,6 +173,28 @@ export const useShopStore = defineStore('shop', {
       }
     },
 
+    async createCheckoutSession(orderData) {
+      try {
+        const res = await fetch(`${API}/create-checkout-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            ...orderData
+          })
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to create checkout session')
+
+        return data
+      } catch (err) {
+        console.error('createCheckoutSession error:', err)
+        this.showToast(err.message || 'Could not start Stripe checkout')
+        throw err
+      }
+    },
+
     async searchProducts(query) {
       this.searchQuery = query
       if (!query || !query.trim()) {

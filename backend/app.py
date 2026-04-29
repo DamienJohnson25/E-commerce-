@@ -4,7 +4,10 @@ app.py — The Main Backend Server
  
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 import sqlite3
+from dotenv import load_dotenv
+import stripe
 from models import (
     init_db, get_all_products, get_product_by_id, search_products,
     get_categories, add_to_cart, get_cart, update_cart_item,
@@ -18,6 +21,43 @@ app = Flask(__name__)
  
 CORS(app, resources={r"/api/*": {"origins": "*"}})
  
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=dotenv_path)
+
+from dotenv import dotenv_values
+file_env = dotenv_values(dotenv_path)
+file_stripe_key = (file_env.get('STRIPE_SECRET_KEY') or '').strip()
+
+def is_placeholder_key(key):
+    if not key:
+        return True
+    placeholder_patterns = [
+        'YOUR_SECRET_KEY',
+        'YourTestKeyHere',
+        'PLACEHOLDER',
+        'sk_test_your',
+        'sk_live_your',
+        'pk_test_your',
+        'pk_live_your'
+    ]
+    return any(p.lower() in key.lower() for p in placeholder_patterns)
+
+env_stripe_key = os.getenv('STRIPE_SECRET_KEY')
+
+if env_stripe_key and not is_placeholder_key(env_stripe_key):
+    STRIPE_SECRET_KEY = env_stripe_key.strip()
+elif file_stripe_key and not is_placeholder_key(file_stripe_key):
+    STRIPE_SECRET_KEY = file_stripe_key
+else:
+    STRIPE_SECRET_KEY = 'sk_test_YOUR_SECRET_KEY_HERE'
+
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173').strip()
+stripe.api_key = STRIPE_SECRET_KEY
+
+is_placeholder = is_placeholder_key(STRIPE_SECRET_KEY)
+print(f"Stripe key loaded: {'PLACEHOLDER' if is_placeholder else 'SET'}")
+print(f"Frontend URL: {FRONTEND_URL}")
+
 init_db()
  
  
@@ -263,6 +303,69 @@ def place_order():
     return jsonify(order), 201
  
  
+@app.route('/api/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    required_fields = ['session_id', 'customer_name', 'customer_email', 'address', 'city', 'zip_code']
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({"error": f"{field} is required"}), 400
+
+    if not STRIPE_SECRET_KEY or is_placeholder_key(STRIPE_SECRET_KEY):
+        return jsonify({"error": "Stripe secret key is not configured or is still a placeholder. Replace backend/.env STRIPE_SECRET_KEY with a valid Stripe secret key."}), 500
+
+    session_id = data['session_id']
+    cart_items = get_cart(session_id)
+    if not cart_items:
+        return jsonify({"error": "Cart is empty — nothing to order"}), 400
+
+    # Create the order first so we can redirect to the order confirmation after payment.
+    order_id = create_order(
+        session_id=session_id,
+        customer_name=data['customer_name'],
+        customer_email=data['customer_email'],
+        address=data['address'],
+        city=data['city'],
+        zip_code=data['zip_code']
+    )
+
+    if not order_id:
+        return jsonify({"error": "Unable to create order."}), 400
+
+    order = get_order(order_id)
+
+    line_items = [
+        {
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {
+                    'name': item['product_name'] if item.get('product_name') else item['name'],
+                },
+                'unit_amount': int(item['price'] * 100)
+            },
+            'quantity': item['quantity']
+        }
+        for item in order['items']
+    ]
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=line_items,
+            mode='payment',
+            success_url=f"{FRONTEND_URL}/order/{order_id}",
+            cancel_url=f"{FRONTEND_URL}/checkout"
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"url": checkout_session.url}), 200
+
+
 @app.route('/api/orders/<int:order_id>', methods=['GET'])
 def order_detail(order_id):
     order = get_order(order_id)

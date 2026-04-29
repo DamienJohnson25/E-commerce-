@@ -140,6 +140,10 @@ const store = useShopStore()
 const router = useRouter()
 const submitting = ref(false)
 
+// Stripe publishable key placeholder.
+// Replace this value in frontend/.env or Vite env variables.
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_YOUR_PUBLISHABLE_KEY_HERE'
+
 const form = reactive({
   customer_name: '',
   customer_email: '',
@@ -192,8 +196,11 @@ async function handlePlaceOrder() {
 
   submitting.value = true
   try {
-    const order = await store.placeOrder({ ...form })
-    router.push(`/order/${order.id}`)
+    const session = await store.createCheckoutSession({
+      ...form,
+      stripe_publishable_key: stripePublishableKey
+    })
+    window.location.href = session.url
   } catch (err) {
     // Error is handled by the store's showToast
   } finally {
