@@ -104,14 +104,14 @@
               <p class="review-item-name">{{ item.name }}</p>
               <p class="review-item-qty">Qty: {{ item.quantity }}</p>
             </div>
-            <span class="review-item-price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+            <span class="review-item-price">£{{ (item.price * item.quantity).toFixed(2) }}</span>
           </div>
         </div>
 
         <div class="review-totals">
           <div class="review-line">
             <span>Subtotal</span>
-            <span>${{ store.cartTotal.toFixed(2) }}</span>
+            <span>£{{ store.cartTotal.toFixed(2) }}</span>
           </div>
           <div class="review-line">
             <span>Shipping</span>
@@ -119,11 +119,11 @@
           </div>
           <div class="review-line">
             <span>Tax</span>
-            <span>${{ (store.cartTotal * 0.08).toFixed(2) }}</span>
+            <span>£{{ (store.cartTotal * 0.08).toFixed(2) }}</span>
           </div>
           <div class="review-line total">
             <span>Total</span>
-            <span>${{ (store.cartTotal * 1.08).toFixed(2) }}</span>
+            <span>£{{ (store.cartTotal * 1.08).toFixed(2) }}</span>
           </div>
         </div>
       </div>

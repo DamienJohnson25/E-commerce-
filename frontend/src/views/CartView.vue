@@ -33,7 +33,7 @@
             <router-link :to="`/product/${item.product_id}`" class="cart-item-name">
               {{ item.name }}
             </router-link>
-            <p class="cart-item-price">${{ item.price.toFixed(2) }}</p>
+            <p class="cart-item-price">£{{ item.price.toFixed(2) }}</p>
 
             <!-- Quantity Controls -->
             <div class="cart-item-actions">
@@ -53,7 +53,7 @@
 
           <!-- Line Total -->
           <div class="cart-item-total">
-            ${{ (item.price * item.quantity).toFixed(2) }}
+            £{{ (item.price * item.quantity).toFixed(2) }}
           </div>
         </div>
       </div>
@@ -65,7 +65,7 @@
         <div class="summary-lines">
           <div class="summary-line">
             <span>Subtotal ({{ store.cartItemCount }} items)</span>
-            <span>${{ store.cartTotal.toFixed(2) }}</span>
+            <span>£{{ store.cartTotal.toFixed(2) }}</span>
           </div>
           <div class="summary-line">
             <span>Shipping</span>
@@ -73,13 +73,13 @@
           </div>
           <div class="summary-line">
             <span>Tax (estimated)</span>
-            <span>${{ (store.cartTotal * 0.08).toFixed(2) }}</span>
+            <span>£{{ (store.cartTotal * 0.08).toFixed(2) }}</span>
           </div>
         </div>
 
         <div class="summary-total">
           <span>Total</span>
-          <span>${{ (store.cartTotal * 1.08).toFixed(2) }}</span>
+          <span>£{{ (store.cartTotal * 1.08).toFixed(2) }}</span>
         </div>
 
         <router-link to="/checkout" class="btn btn-primary btn-lg summary-checkout">

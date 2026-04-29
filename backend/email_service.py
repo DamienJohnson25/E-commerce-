@@ -71,7 +71,7 @@ def send_order_confirmation(order):
         <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #eee;">{item['name']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">{item['quantity']}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">${item['price']:.2f}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">£{item['price']:.2f}</td>
         </tr>
         """
 
@@ -99,7 +99,7 @@ def send_order_confirmation(order):
             </table>
 
             <div style="text-align:right;font-size:18px;font-weight:bold;margin:16px 0;">
-                Total: ${order['total']:.2f}
+                Total: £{order['total']:.2f}
             </div>
 
             <div style="background:#f8f8f8;padding:16px;border-radius:8px;margin:16px 0;">

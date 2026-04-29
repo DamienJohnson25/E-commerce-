@@ -42,7 +42,7 @@
           <span class="rating-num">{{ product.rating }} / 5</span>
         </div>
 
-        <p class="detail-price">${{ product.price.toFixed(2) }}</p>
+        <p class="detail-price">£{{ product.price.toFixed(2) }}</p>
 
         <p class="detail-desc">{{ product.description }}</p>
 
@@ -74,7 +74,7 @@
             <span class="feature-icon">🚚</span>
             <div>
               <strong>Free Shipping</strong>
-              <p>On orders over $50</p>
+              <p>On orders over £50</p>
             </div>
           </div>
           <div class="feature-item">

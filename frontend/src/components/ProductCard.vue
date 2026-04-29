@@ -28,7 +28,7 @@
       <p class="card-desc">{{ truncate(product.description, 80) }}</p>
 
       <div class="card-footer">
-        <span class="card-price">${{ product.price.toFixed(2) }}</span>
+        <span class="card-price">£{{ product.price.toFixed(2) }}</span>
         <div class="card-rating">
           <span class="star">★</span>
           <span>{{ product.rating }}</span>

@@ -55,7 +55,7 @@
           </div>
           <div>
             <span class="details-label">Total</span>
-            <span class="details-value total">${{ order.total.toFixed(2) }}</span>
+            <span class="details-value total">£{{ order.total.toFixed(2) }}</span>
           </div>
         </div>
 
@@ -67,7 +67,7 @@
               <span class="order-item-name">{{ item.product_name }}</span>
               <span class="order-item-qty">Qty: {{ item.quantity }}</span>
             </div>
-            <span class="order-item-price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+            <span class="order-item-price">£{{ (item.price * item.quantity).toFixed(2) }}</span>
           </div>
         </div>
 

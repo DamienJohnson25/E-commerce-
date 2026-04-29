@@ -341,7 +341,7 @@ def create_checkout_session():
     line_items = [
         {
             'price_data': {
-                'currency': 'usd',
+                'currency': 'gbp',
                 'product_data': {
                     'name': item['product_name'] if item.get('product_name') else item['name'],
                 },
