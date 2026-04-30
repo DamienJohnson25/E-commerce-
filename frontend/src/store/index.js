@@ -15,6 +15,8 @@ export const useShopStore = defineStore('shop', {
   state: () => ({
     sessionId: getSessionId(),
     products: [],
+    // --- NEW STATE FOR RECOMMENDATIONS ---
+    recommendedProducts: [], 
     categories: [],
     cart: { items: [], total: 0, item_count: 0 },
     loading: false,
@@ -31,14 +33,14 @@ export const useShopStore = defineStore('shop', {
     cartTotal: (state) => state.cart.total || 0,
     isLoggedIn: (state) => state.isAuthenticated,
     featuredProducts: (state) => state.products.filter(p => p.featured),
+    // --- NEW GETTER ---
+    allRecommendations: (state) => state.recommendedProducts,
 
     filteredProducts: (state) => {
       let result = state.products
-
       if (state.selectedCategory && state.selectedCategory !== 'all') {
         result = result.filter(p => p.category === state.selectedCategory)
       }
-
       if (state.searchQuery) {
         const q = state.searchQuery.toLowerCase()
         result = result.filter(p =>
@@ -46,7 +48,6 @@ export const useShopStore = defineStore('shop', {
           p.description.toLowerCase().includes(q)
         )
       }
-
       return result
     }
   },
@@ -55,6 +56,25 @@ export const useShopStore = defineStore('shop', {
     showToast(message) {
       this.toast = message
       setTimeout(() => { this.toast = null }, 3000)
+    },
+
+    // --- NEW ACTION: FETCH RECOMMENDATIONS ---
+    async fetchRecommendations(productId = null) {
+      try {
+        // Construct the URL. Pass productId if we want contextual "similar" items
+        let url = `${API}/recommendations`
+        if (productId) {
+          url += `?product_id=${productId}`
+        }
+
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('Failed to fetch recommendations')
+        
+        const data = await res.json()
+        this.recommendedProducts = data
+      } catch (err) {
+        console.error('fetchRecommendations error:', err)
+      }
     },
 
     async fetchProducts() {
@@ -92,15 +112,27 @@ export const useShopStore = defineStore('shop', {
       }
     },
 
-    async addToCart(productId, quantity = 1) {
+    async addToCart(productOrId, quantity = 1) {
       try {
+        let productId = productOrId
+        let qty = quantity
+
+        if (typeof productOrId === 'object' && productOrId !== null) {
+          productId = productOrId.id || productOrId.product_id
+          qty = productOrId.quantity ?? quantity
+        }
+
+        if (!productId) {
+          throw new Error('Invalid product selected')
+        }
+
         const res = await fetch(`${API}/cart`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             session_id: this.sessionId,
             product_id: productId,
-            quantity
+            quantity: qty
           })
         })
 
@@ -276,7 +308,6 @@ export const useShopStore = defineStore('shop', {
           body: JSON.stringify({ email: this.user.email })
         })
 
-        // 🔍 DEBUG LOG (helps you see what's happening)
         console.log('DELETE response status:', res.status)
 
         const data = await res.json()
@@ -292,3 +323,4 @@ export const useShopStore = defineStore('shop', {
     }
   }
 })
+

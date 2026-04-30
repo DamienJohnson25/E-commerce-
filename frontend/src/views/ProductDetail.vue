@@ -1,356 +1,290 @@
-<!--
-  ProductDetail.vue — Single Product Page
-  ==========================================
-  Shows full details for one product with add-to-cart.
-  Like picking up an item in a store and reading the back of the box.
--->
-
 <template>
   <div class="container detail-page">
-    <!-- Loading -->
-    <div v-if="loading" class="empty-state">
-      <div class="spinner"></div>
-      <p>Loading product...</p>
-    </div>
+    <div v-if="product">
+      <div class="detail-layout">
+        <!-- PRODUCT VISUALS -->
+        <div class="product-visuals">
+          <img :src="product.image_url" :alt="product.name" class="main-image" />
+        </div>
 
-    <!-- Not Found -->
-    <div v-else-if="!product" class="empty-state">
-      <span style="font-size: 2.5rem;">😔</span>
-      <h3>Product not found</h3>
-      <router-link to="/products" class="btn btn-outline">Back to Shop</router-link>
-    </div>
+        <!-- PRODUCT INFO -->
+        <div class="product-info">
+          <p class="category-breadcrumb">{{ product.category }}</p>
+          <h1 class="product-title">{{ product.name }}</h1>
+          
+          <div class="product-meta">
+            <span class="price-tag">£{{ product.price.toFixed(2) }}</span>
+            <span v-if="product.brand" class="brand-tag">| {{ product.brand }}</span>
+          </div>
 
-    <!-- Product Detail -->
-    <div v-else class="detail-layout">
-      <!-- Image -->
-      <div class="detail-image-wrap">
-        <img :src="product.image_url" :alt="product.name" class="detail-image" />
-        <span v-if="product.featured" class="featured-tag">Featured</span>
+          <p class="description">{{ product.description }}</p>
+
+          <!-- ── RESTORED QUANTITY & CART CONTROLS ── -->
+          <div class="purchase-zone">
+            <div class="quantity-controls">
+              <button 
+                @click="updateQuantity(-1)" 
+                class="qty-btn" 
+                :disabled="quantity <= 1"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+              
+              <span class="qty-number">{{ quantity }}</span>
+              
+              <button 
+                @click="updateQuantity(1)" 
+                class="qty-btn"
+                :disabled="quantity >= (product.stock || 99)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
+
+            <button @click="addToCart" class="add-to-cart-btn">
+              Add to Cart
+            </button>
+          </div>
+          
+          <p v-if="product.stock <= 5" class="stock-warning">
+            Only {{ product.stock }} left in stock!
+          </p>
+        </div>
       </div>
 
-      <!-- Info -->
-      <div class="detail-info">
-        <router-link to="/products" class="back-link">
-          ← Back to Shop
-        </router-link>
+      <!-- RECOMMENDATIONS SECTION -->
+      <div class="recommendations-container">
+        <RecommendationsRow
+          :title="`More ${product.category}`"
+          :productId="product.id"
+          filterType="category"
+          :filterValue="product.category"
+        />
 
-        <span class="detail-category">{{ product.category }}</span>
-        <h1 class="detail-title">{{ product.name }}</h1>
-
-        <div class="detail-rating">
-          <span class="stars">{{ '★'.repeat(Math.round(product.rating)) }}{{ '☆'.repeat(5 - Math.round(product.rating)) }}</span>
-          <span class="rating-num">{{ product.rating }} / 5</span>
-        </div>
-
-        <p class="detail-price">£{{ product.price.toFixed(2) }}</p>
-
-        <p class="detail-desc">{{ product.description }}</p>
-
-        <!-- Stock Status -->
-        <div class="stock-status" :class="product.stock > 0 ? 'in-stock' : 'out-of-stock'">
-          <span class="stock-dot"></span>
-          {{ product.stock > 0 ? `${product.stock} in stock` : 'Out of stock' }}
-        </div>
-
-        <!-- Quantity Selector + Add to Cart -->
-        <div class="detail-actions">
-          <div class="qty-selector">
-            <button class="qty-btn" @click="quantity > 1 && quantity--">−</button>
-            <span class="qty-value">{{ quantity }}</span>
-            <button class="qty-btn" @click="quantity < product.stock && quantity++">+</button>
-          </div>
-          <button
-            class="btn btn-primary btn-lg flex-1"
-            @click="handleAddToCart"
-            :disabled="product.stock === 0"
-          >
-            {{ product.stock === 0 ? 'Out of Stock' : 'Add to Cart' }}
-          </button>
-        </div>
-
-        <!-- Features List -->
-        <div class="detail-features">
-          <div class="feature-item">
-            <span class="feature-icon">🚚</span>
-            <div>
-              <strong>Free Shipping</strong>
-              <p>On orders over £50</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">↩️</span>
-            <div>
-              <strong>Easy Returns</strong>
-              <p>30-day return policy</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">🔒</span>
-            <div>
-              <strong>Secure Checkout</strong>
-              <p>Encrypted payment</p>
-            </div>
-          </div>
-        </div>
+        <RecommendationsRow
+          :title="`In a Similar Price Range`"
+          :productId="product.id"
+          filterType="price_range"
+          :filterValue="product.price"
+        />
+        
+        <!-- ... other rows remain the same ... -->
       </div>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div v-else-if="loading" class="page-loading">
+      <div class="page-skeleton" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useShopStore } from '../store/index.js'
+import { useShopStore } from '../store/index.js' // Assuming you have a Pinia/Vuex store
+import RecommendationsRow from '../components/RecommendationsRow.vue'
 
 const route = useRoute()
 const store = useShopStore()
+
 const product = ref(null)
 const loading = ref(true)
 const quantity = ref(1)
 
-onMounted(async () => {
+async function loadPageData() {
+  loading.value = true
+  quantity.value = 1 // Reset quantity on new product load
   try {
     const res = await fetch(`/api/products/${route.params.id}`)
-    if (res.ok) {
-      product.value = await res.json()
-    }
+    if (res.ok) product.value = await res.json()
   } catch (err) {
-    console.error('Failed to load product:', err)
+    console.error(err)
   } finally {
     loading.value = false
   }
-})
+}
 
-function handleAddToCart() {
-  if (product.value) {
-    store.addToCart(product.value.id, quantity.value)
+function updateQuantity(diff) {
+  const next = quantity.value + diff
+  if (next >= 1 && next <= (product.value.stock || 99)) {
+    quantity.value = next
   }
 }
+
+function addToCart() {
+  store.addToCart(product.value.id, quantity.value)
+}
+
+onMounted(loadPageData)
+watch(() => route.params.id, loadPageData)
 </script>
 
 <style scoped>
-.detail-page {
-  padding-top: var(--space-lg);
-}
-
-.detail-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3xl);
-  align-items: start;
-}
-
-/* ─── Image ───────────────────────────────────────────── */
-.detail-image-wrap {
-  position: relative;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  background: var(--color-border-light);
-}
-
-.detail-image {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-}
-
-.featured-tag {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 6px 14px;
-  background: var(--color-accent);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: var(--radius-full);
-}
-
-/* ─── Info ────────────────────────────────────────────── */
-.detail-info {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.back-link {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  transition: color 0.2s;
-  align-self: flex-start;
-}
-
-.back-link:hover {
-  color: var(--color-accent);
-}
-
-.detail-category {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-accent);
-}
-
-.detail-title {
-  font-family: var(--font-heading);
-  font-size: 1.8rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.detail-rating {
+.purchase-zone {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 1.5rem;
+  margin-top: 2rem;
 }
 
-.stars {
-  color: var(--color-warning);
-  letter-spacing: 2px;
-}
-
-.rating-num {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-}
-
-.detail-price {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.detail-desc {
-  font-size: 1rem;
-  line-height: 1.7;
-  color: var(--color-text-muted);
-}
-
-/* ─── Stock ───────────────────────────────────────────── */
-.stock-status {
+.quantity-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.stock-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.in-stock { color: var(--color-success); }
-.in-stock .stock-dot { background: var(--color-success); }
-.out-of-stock { color: var(--color-danger); }
-.out-of-stock .stock-dot { background: var(--color-danger); }
-
-/* ─── Actions ─────────────────────────────────────────── */
-.detail-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
-}
-
-.flex-1 { flex: 1; }
-
-.qty-selector {
-  display: flex;
-  align-items: center;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
 }
 
 .qty-btn {
   width: 40px;
-  height: 44px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #1e293b;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #6366f1;
+}
+
+.qty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qty-number {
+  padding: 0 1.25rem;
+  font-weight: 700;
   font-size: 1.1rem;
-  color: var(--color-text);
-  transition: background 0.15s;
-}
-
-.qty-btn:hover {
-  background: var(--color-border-light);
-}
-
-.qty-value {
-  width: 40px;
+  min-width: 50px;
   text-align: center;
-  font-weight: 600;
-  font-size: 0.95rem;
 }
 
-/* ─── Features ────────────────────────────────────────── */
-.detail-features {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  margin-top: var(--space-lg);
-  padding-top: var(--space-lg);
-  border-top: 1px solid var(--color-border-light);
+.add-to-cart-btn {
+  flex: 1;
+  height: 48px;
+  background: #1e293b;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s active;
 }
 
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+.add-to-cart-btn:hover {
+  background: #0f172a;
 }
 
-.feature-icon {
-  font-size: 1.3rem;
+.add-to-cart-btn:active {
+  transform: scale(0.98);
 }
 
-.feature-item strong {
+.stock-warning {
+  margin-top: 1rem;
   font-size: 0.85rem;
-  display: block;
+  color: #e11d48;
+  font-weight: 600;
 }
 
-.feature-item p {
-  font-size: 0.8rem;
-  color: var(--color-text-light);
+
+</style>
+
+<style scoped>
+.detail-page { padding: 2rem 0; }
+
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  margin-bottom: 5rem;
 }
 
-/* ─── Empty State ─────────────────────────────────────── */
-.empty-state {
-  text-align: center;
-  padding: var(--space-3xl);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-  color: var(--color-text-muted);
+.main-image {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
-.empty-state h3 {
-  font-family: var(--font-heading);
-  color: var(--color-text);
+.category-breadcrumb {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6366f1;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
 }
 
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--color-border);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.product-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+.price-tag {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+}
 
-/* ─── Responsive ──────────────────────────────────────── */
+.description {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #475569;
+  margin: 2rem 0;
+}
+
+.add-to-cart-btn {
+  background: #1e293b;
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.recommendations-container {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 3rem;
+}
+
+/* Skeleton animation */
+.page-skeleton {
+  width: 100%;
+  height: 400px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
 @media (max-width: 768px) {
-  .detail-layout {
-    grid-template-columns: 1fr;
-    gap: var(--space-xl);
-  }
+  .detail-layout { grid-template-columns: 1fr; gap: 2rem; }
+  .product-title { font-size: 1.75rem; }
 }
 </style>

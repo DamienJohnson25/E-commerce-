@@ -15,6 +15,8 @@ from models import (
 )
 
 from email_service import send_order_confirmation, send_welcome_email
+# --- IMPORT RECOMMENDATION LOGIC ---
+from recommendations import get_recommendations 
  
 # ─── App Setup ─────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -96,6 +98,20 @@ def product_detail(product_id):
 def list_categories():
     categories = get_categories()
     return jsonify(categories)
+
+# ─── Recommendation Endpoints ─────────────────────────────────────
+@app.route('/api/recommendations', methods=['GET'])
+def fetch_recommendations():
+    """
+    Returns scored recommendations based on:
+    1. Same Category (+3)
+    2. Frequently bought together (+2)
+    3. High Rating (+1)
+    """
+    product_id = request.args.get('product_id')
+    # This calls the logic in your recommendations.py
+    recommendations = get_recommendations(product_id)
+    return jsonify(recommendations), 200
  
  
 # ─── Authentication Endpoints ─────────────────────────────────────
@@ -219,7 +235,7 @@ def delete_account():
 # ─── Cart Endpoints ────────────────────────────────────────────────
 @app.route('/api/cart', methods=['POST'])
 def add_item_to_cart():
-    data = request.get_json()
+    data = request.get_json(silent=True)
  
     if not data:
         return jsonify({"error": "Request body is required"}), 400
@@ -227,6 +243,16 @@ def add_item_to_cart():
     session_id = data.get('session_id')
     product_id = data.get('product_id')
     quantity = data.get('quantity', 1)
+ 
+    try:
+        product_id = int(product_id) if product_id is not None else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "product_id must be an integer"}), 400
+ 
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Quantity must be an integer"}), 400
  
     if not session_id or not product_id:
         return jsonify({"error": "session_id and product_id are required"}), 400
@@ -398,3 +424,4 @@ if __name__ == '__main__':
     print("ShopVue API starting on http://localhost:5000")
     print("Try visiting: http://localhost:5000/api/health")
     app.run(debug=True, port=5000)
+    
